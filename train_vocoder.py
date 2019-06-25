@@ -20,6 +20,8 @@ from wavenet import WaveNetModel,mu_law_decode
 from datasets import DataFeederWavenet
 from hparams import hparams
 from utils import validate_directories,load,save,infolog,get_tensors_in_checkpoint_file,build_tensors_in_checkpoint_file,plot,audio
+from tensorflow.compat.v1 import ConfigProto
+from tensorflow.compat.v1 import InteractiveSession
 
 tf.logging.set_verbosity(tf.logging.ERROR)
 EPSILON = 0.001
@@ -114,6 +116,10 @@ def create_network(hp,batch_size,num_speakers,is_training):
     
     return net
 def main():
+    config = ConfigProto()
+    config.gpu_options.allow_growth = True
+
+    sess = InteractiveSession(config=config)
     def _str_to_bool(s):
         """Convert string to bool (in argparse context)."""
         if s.lower() not in ['true', 'false']:
@@ -123,13 +129,13 @@ def main():
     
     parser = argparse.ArgumentParser(description='WaveNet example network')
     
-    DATA_DIRECTORY =  'D:\\hccho\\Tacotron-Wavenet-Vocoder-hccho\\data\\moon,D:\\hccho\\Tacotron-Wavenet-Vocoder-hccho\\data\\son'
-    #DATA_DIRECTORY =  'D:\\hccho\\Tacotron-Wavenet-Vocoder-hccho\\data\\moon'
+    #DATA_DIRECTORY =  'D:\\hccho\\Tacotron-Wavenet-Vocoder-hccho\\data\\moon,D:\\hccho\\Tacotron-Wavenet-Vocoder-hccho\\data\\son'
+    DATA_DIRECTORY =  './/data//moon,.//data//son'
     parser.add_argument('--data_dir', type=str, default=DATA_DIRECTORY, help='The directory containing the VCTK corpus.')
 
 
-    #LOGDIR = None
-    LOGDIR = './/logdir-wavenet//train//2019-03-27T20-27-18'
+    LOGDIR = None
+    #LOGDIR = './/logdir-wavenet//train//2019-03-27T20-27-18'
 
     parser.add_argument('--logdir', type=str, default=LOGDIR,help='Directory in which to store the logging information for TensorBoard. If the model already exists, it will restore the state and will continue training. Cannot use with --logdir_root and --restore_from.')
     
@@ -142,7 +148,7 @@ def main():
     parser.add_argument('--checkpoint_every', type=int, default=CHECKPOINT_EVERY,help='How many steps to save each checkpoint after. Default: ' + str(CHECKPOINT_EVERY) + '.')
     
     
-    parser.add_argument('--eval_every', type=int, default=2,help='Steps between eval on test data')
+    parser.add_argument('--eval_every', type=int, default=8,help='Steps between eval on test data')
     
    
     
@@ -205,8 +211,8 @@ def main():
     run_metadata = tf.RunMetadata()
 
     # Set up session
-    sess = tf.Session(config=tf.ConfigProto(log_device_placement=False))  # log_device_placement=False --> cpu/gpu 자동 배치.
-    init = tf.global_variables_initializer()
+    #sess = tf.Session(config=tf.ConfigProto(log_device_placement=False))  # log_device_placement=False --> cpu/gpu 자동 배치.
+    init =  tf.group(tf.initialize_all_variables(), tf.initialize_local_variables())
     sess.run(init)
     
     # Saver for storing checkpoints of the model.

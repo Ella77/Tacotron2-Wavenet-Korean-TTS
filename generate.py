@@ -108,17 +108,19 @@ def create_seed(filename,sample_rate,quantization_channels,window_size,scalar_in
 
 
 def main():
-    config = get_arguments()
-    started_datestring = "{0:%Y-%m-%dT%H-%M-%S}".format(datetime.now())
-    logdir = os.path.join(config.logdir, 'generate', started_datestring)
-    
-    if not os.path.exists(logdir):
-        os.makedirs(logdir)
 
-    load_hparams(hparams, config.checkpoint_dir)
 
 
     with tf.device('/cpu:0'):  # cpu가 더 빠르다. gpu로 설정하면 Error. tf.device 없이 하면 더 느려진다.
+        config = get_arguments()
+        started_datestring = "{0:%Y-%m-%dT%H-%M-%S}".format(datetime.now())
+        logdir = os.path.join(config.logdir, 'generate', started_datestring)
+        print('logdir0-------------'+logdir)
+
+        if not os.path.exists(logdir):
+            os.makedirs(logdir)
+
+        load_hparams(hparams, config.checkpoint_dir)
 
         sess = tf.Session()
         scalar_input = hparams.scalar_input
@@ -152,7 +154,7 @@ def main():
         next_sample = net.predict_proba_incremental(samples,upsampled_local_condition, [config.gc_id]*net.batch_size)  # Fast Wavenet Generation Algorithm-1611.09482 algorithm 적용
         
         # making local condition data. placeholder - upsampled_local_condition 넣어줄 upsampled local condition data를 만들어 보자.
-        
+        print('logdir0-------------'+logdir)
         mel_input = np.load(config.mel)
         sample_size = mel_input.shape[0] * hparams.hop_size
         mel_input = np.tile(mel_input,(config.batch_size,1,1))
@@ -164,10 +166,11 @@ def main():
         print('Restoring model from {}'.format(config.checkpoint_dir))
         
         load(saver, sess, config.checkpoint_dir)
-        
-        sess.run(net.queue_initializer) # 이 부분이 없으면, checkpoint에서 복원된 값들이 들어 있다.
-    
-     
+        init_op = tf.group(tf.initialize_all_variables(),net.queue_initializer)
+
+        sess.run(init_op) # 이 부분이 없으면, checkpoint에서 복원된 값들이 들어 있다.
+
+
     
         quantization_channels = hparams.quantization_channels
         if config.wav_seed:
